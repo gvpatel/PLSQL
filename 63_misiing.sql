@@ -1,0 +1,114 @@
+SELECT NAME, integration_id, agree_num, rev_num,TERM_TYPE, GCRM_STATUS, REAL_STATUS,
+MEDIA,X_CUST_CLASS,X_CUSTOMER_SUBCLASS,
+EFF_START_DT, EFF_END_DT, X_MONTLY_NET_PRICE,
+
+CASE WHEN rev_num < 2 then 'REOPEN_RESUMBIT_ORDER' ELSE 'MANUAL_FIX' END AS RECOMMENDATION
+FROM (
+SELECT c.name, c.integration_id , a.row_id, a.agree_num, a.stat_cd as GCRM_STATUS, a.rev_num , a.X_TERM_TYPE TERM_TYPE
+,RANK() OVER (PARTITION BY a.AGREE_NUM ORDER BY a.rev_num desc) AS r
+,case when (( X_TERM_TYPE = 'Fixed Term' and EFF_END_DT < sysdate ) 
+                        OR  a.stat_cd = 'Inactive' )  THEN
+     'EXPIRED'
+     ELSE 'ACTIVE' 
+   END  AS REAL_STATUS,
+   X_MONTLY_NET_PRICE,
+ 
+ (  SELECT case when count(*) > 0 then 'Y' ELSE 'N' END from siebel.s_doc_agree p, siebel.s_asset q
+, siebel.s_prod_int r
+where p.row_id = q.cur_agree_id
+and q.prod_id = r.row_id
+and r.X_LN_PRODUCT_SEGMENT = 'Media'
+and p.row_id = a.row_id ) AS MEDIA   
+
+,a.X_TERM_TYPE , a.X_ORDER_SUB_TYPE
+, a.EFF_START_DT, a.EFF_END_DT, a.X_MULTI_TERM_FLG, c.X_CUST_CLASS, c.X_CUSTOMER_SUBCLASS
+  
+FROM  SIEBEL.s_doc_agree a,
+siebel.s_org_Ext c
+where a.TARGET_OU_ID = c.row_id
+and c.LOC IN
+('42528JM8M',
+'425295K5X',
+'425288D6H',
+'425288LMQ',
+'4252827BS',
+'42528VQJZ',
+'42529BJH2',
+'42529LJB5',
+'42529JTDR',
+'42537C96S',
+'425285H54')
+
+and a.agree_num in (
+'1000463407',
+'1000464853',
+'1000467627',
+'1000345364',
+'1000345366',
+'1000534893',
+'1000535499',
+'1000478061',
+'1000478376',
+'1000551344',
+'1000553907',
+'1000553909',
+'1000523795',
+'1000536937',
+'1000544298',
+'1000544307',
+'1000456940',
+'1000456947',
+'1000456955',
+'1000458349',
+'1000460414',
+'1000463497',
+'1000466021',
+'1000473656',
+'1000473658',
+'1000475044',
+'1000552957',
+'1000555243',
+'1000556802',
+'1000557028',
+'1000557029',
+'1000557566',
+'1000559354',
+'1000561858',
+'1000563134',
+'1000461406',
+'1000461940',
+'1000463048',
+'1000547214',
+'1000454180',
+'1000454181',
+'1000454182',
+'1000454186',
+'1000545198',
+'1000547120',
+'1000507536',
+'1000511077',
+'1000513900',
+'1000551191',
+'1000555078',
+'1000560095',
+'1000560419',
+'1000560863',
+'1000562739',
+'1000562760',
+'1000562769',
+'1000562771',
+'1000562865',
+'1000562866',
+'1000237587',
+'1000270838',
+'1000439547',
+'1000454183',
+'1000454185',
+'1000454187'
+
+)
+
+order by c.integration_id, agree_num, a.rev_num desc
+) WHERE r = 1
+--and real_status <> 'EXPIRED'
+ORDER BY 13, 12
