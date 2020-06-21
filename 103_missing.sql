@@ -2,6 +2,8 @@ SELECT NAME, integration_id, agree_num, rev_num,TERM_TYPE, GCRM_STATUS, REAL_STA
 MEDIA,X_CUST_CLASS,X_CUSTOMER_SUBCLASS,
 EFF_START_DT, EFF_END_DT, X_MONTLY_NET_PRICE,
 
+
+
 CASE WHEN rev_num < 2 then 'REOPEN_RESUMBIT_ORDER' ELSE 'MANUAL_FIX' END AS RECOMMENDATION
 FROM (
 SELECT c.name, c.integration_id , a.row_id, a.agree_num, a.stat_cd as GCRM_STATUS, a.rev_num , a.X_TERM_TYPE TERM_TYPE
