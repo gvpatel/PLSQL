@@ -38,7 +38,7 @@ cursor C1 IS
                       AND customer1.integration_id IS NOT NULL
                       AND customer1.accnt_type_cd = 'Customer' 
                       AND syp.val=postn.x_postn_year AND syp.sys_pref_cd='LN Current Year'
-                      AND ROWNUM < 101;
+                      AND ROWNUM < 10;
 
 
 BEGIN
