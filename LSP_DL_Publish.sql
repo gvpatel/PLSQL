@@ -43,6 +43,8 @@ cursor C1 IS
 
 BEGIN
 
+--Create ChangeSet ID
+
 
 FOR X in C1 LOOP
       FOR Y IN (  SELECT orgcust.INTEGRATION_ID AS OCPGUID, XMLAGG(
@@ -99,6 +101,13 @@ FOR X in C1 LOOP
         utl_http.read_text(res, respond);
         utl_http.end_response(res);
         dbms_output.put_line(respond);
+        APEX_JSON.parse(respond);
+    
+       DBMS_OUTPUT.put_line('Request Id   : ' || APEX_JSON.get_varchar2(p_path => 'object."object-state"'));
+
+
+        
+        
        -- dbms_output.put_line('Published: '||r1.item_number);
       --  l_count:=l_count+1;
       
