@@ -1,13 +1,18 @@
 SET SERVEROUTPUT ON;
 
-
 DECLARE
+
     req              utl_http.req;
     res              utl_http.resp;
     --'http://datalake.content.aws.lexis.com/objects/v1/testobject1?collection-id=ProductMasterTestCollection'
     base_url         VARCHAR2(400) := 'http://datalake-staging-proxy.lexis.com/objects/v1/';
     end_url          VARCHAR2(400) := '?collection-id=ProductMasterTestCollection';
-    url              VARCHAR2(800):='http://datalake-staging-proxy.lexis.com/objects/v1/Testobject1?collection-id=ProductMasterTestCollection';
+    v_chgSetBaseURL  VARCHAR2(800) := 'http://datalake-staging-proxy.lexis.com/objects/v1/changeset';
+    v_chgSetURL      VARCHAR2(800);
+    vChangeSetID     VARCHAR2(500);
+    url              VARCHAR2(800); 
+    v_collection     VARCHAR2(100) := 'ProductMasterTestCollection';
+    v_apikey         VARCHAR2(100) := '9Ps9jBw2dj87epSD1FH9X1GHtJfQXLTh9vcVWRa0';
     name             VARCHAR2(4000);
     buffer           VARCHAR2(4000);
     content          CLOB;
@@ -38,13 +43,25 @@ cursor C1 IS
                       AND customer1.integration_id IS NOT NULL
                       AND customer1.accnt_type_cd = 'Customer' 
                       AND syp.val=postn.x_postn_year AND syp.sys_pref_cd='LN Current Year'
-                      AND ROWNUM < 10;
-
+                      AND ROWNUM < 1001;
 
 BEGIN
 
 --Create ChangeSet ID
-
+        v_chgSetURL := v_chgSetBaseURL||'?description='||'GCRM'||TO_CHAR(SYSDATE,'MMDDYYYHH24MISS');
+        dbms_output.put_line (' URL :' || v_chgSetURL);
+        utl_http.set_response_error_check(enable => false);
+        utl_http.set_detailed_excp_support(enable => true);
+        req := utl_http.begin_request(v_chgSetURL, 'POST');   
+        utl_http.set_header(r => req, name => 'x-api-key', value => v_apikey);
+        res := utl_http.get_response(req);
+        utl_http.read_text(res, respond);
+        utl_http.end_response(res);
+        dbms_output.put_line(respond);
+        APEX_JSON.parse(respond);    
+        vChangeSetID := APEX_JSON.get_varchar2(p_path => 'changeset."changeset-id"');
+        DBMS_OUTPUT.put_line('Request Id   : ' || APEX_JSON.get_varchar2(p_path => 'changeset."changeset-id"')); 
+        DBMS_OUTPUT.put_line('Request Id   : ' || APEX_JSON.get_varchar2(p_path => 'changeset."changeset-state"')); 
 
 FOR X in C1 LOOP
       FOR Y IN (  SELECT orgcust.INTEGRATION_ID AS OCPGUID, XMLAGG(
@@ -86,14 +103,17 @@ FOR X in C1 LOOP
         -- content := 'Welcome';
         content := Y.v_xml.getStringVal();
         
-        url  := 'http://datalake-staging-proxy.lexis.com/objects/v1/'||Y.OCPGUID||'?collection-id=ProductMasterTestCollection';
+     --   url  := 'http://datalake-staging-proxy.lexis.com/objects/v1/'||Y.OCPGUID||'?collection-id=ProductMasterTestCollection';
+     
+        url := base_url||Y.OCPGUID||'?collection-id='||v_collection;
    
         content_length := length(y.v_xml.getStringVal());
         utl_http.set_response_error_check(enable => false);
         utl_http.set_detailed_excp_support(enable => true);
         req := utl_http.begin_request(url, 'PUT');
-        utl_http.set_header(r => req, name => 'collection-id', value => 'ProductMasterTestCollection');
-        utl_http.set_header(r => req, name => 'x-api-key', value => '9Ps9jBw2dj87epSD1FH9X1GHtJfQXLTh9vcVWRa0');--'HY0xYkNF2K7wmHPKZYi1iAXaeunZhXQ5dhv0VQ5c');
+        utl_http.set_header(r => req, name => 'collection-id', value => v_collection);
+        utl_http.set_header(r => req, name => 'x-api-key', value => v_apikey);--'HY0xYkNF2K7wmHPKZYi1iAXaeunZhXQ5dhv0VQ5c');
+        utl_http.set_header(r => req, name => 'changeset-id', value => vChangeSetID);
         utl_http.set_header(r => req, name => 'Content-Type', value => 'application/xml');--'text/plain');
         utl_http.set_header(req, 'Content-Length', content_length);
         utl_http.write_text(req, content);
@@ -103,17 +123,30 @@ FOR X in C1 LOOP
         dbms_output.put_line(respond);
         APEX_JSON.parse(respond);
     
-       DBMS_OUTPUT.put_line('Request Id   : ' || APEX_JSON.get_varchar2(p_path => 'object."object-state"'));
-
-
-        
-        
-       -- dbms_output.put_line('Published: '||r1.item_number);
-      --  l_count:=l_count+1;
-      
-   END LOOP;
+       DBMS_OUTPUT.put_line('Request Id   : ' || APEX_JSON.get_varchar2(p_path => 'object."object-state"'));      
+    END LOOP;
    
- END LOOP;   
+  END LOOP;   
+
+-- Close ChangeSet
+       v_chgSetURL := NULL;
+    --Create ChangeSet ID
+        v_chgSetURL := v_chgSetBaseURL||'/'||vChangeSetID;
+        dbms_output.put_line (' URL :' || v_chgSetURL);
+        utl_http.set_response_error_check(enable => false);
+        utl_http.set_detailed_excp_support(enable => true);
+        req := utl_http.begin_request(v_chgSetURL, 'POST');   
+        utl_http.set_header(r => req, name => 'x-api-key', value => v_apikey);
+        res := utl_http.get_response(req);
+        utl_http.read_text(res, respond);
+        utl_http.end_response(res);
+        dbms_output.put_line(respond);
+        APEX_JSON.parse(respond);    
+       -- vChangeSetID := APEX_JSON.get_varchar2(p_path => 'changeset."changeset-id"');
+        DBMS_OUTPUT.put_line('Request Id   : ' || APEX_JSON.get_varchar2(p_path => 'changeset."changeset-state"')); 
+
+ 
+
 
 DBMS_OUTPUT.PUT_LINE ('Number :'|| to_char(i));
 
