@@ -11,7 +11,8 @@ DECLARE
     v_chgSetURL      VARCHAR2(800);
     vChangeSetID     VARCHAR2(500);
     url              VARCHAR2(800); 
-    v_collection     VARCHAR2(100) := 'ProductMasterTestCollection';
+   -- v_collection     VARCHAR2(100) := 'ProductMasterTestCollection';
+   v_collection     VARCHAR2(100) := 'GCRMLSPPUBLISH';
     v_apikey         VARCHAR2(100) := '9Ps9jBw2dj87epSD1FH9X1GHtJfQXLTh9vcVWRa0';
     name             VARCHAR2(4000);
     buffer           VARCHAR2(4000);
@@ -22,6 +23,7 @@ DECLARE
     l_count number:=0;
     v_xml          XMLTYPE;
     i NUMBER := 0;
+     l_cursor SYS_REFCURSOR;
  
 
 cursor C1 IS
@@ -43,12 +45,12 @@ cursor C1 IS
                       AND customer1.integration_id IS NOT NULL
                       AND customer1.accnt_type_cd = 'Customer' 
                       AND syp.val=postn.x_postn_year AND syp.sys_pref_cd='LN Current Year'
-                      AND ROWNUM < 1001;
+                      AND ROWNUM < 10;
 
 BEGIN
 
 --Create ChangeSet ID
-        v_chgSetURL := v_chgSetBaseURL||'?description='||'GCRM'||TO_CHAR(SYSDATE,'MMDDYYYHH24MISS');
+        v_chgSetURL := v_chgSetBaseURL||'?description='||'GCRM'||TO_CHAR(SYSDATE,'MMDDYYYYHH24MISS');
         dbms_output.put_line (' URL :' || v_chgSetURL);
         utl_http.set_response_error_check(enable => false);
         utl_http.set_detailed_excp_support(enable => true);
@@ -115,6 +117,13 @@ FOR X in C1 LOOP
         utl_http.set_header(r => req, name => 'x-api-key', value => v_apikey);--'HY0xYkNF2K7wmHPKZYi1iAXaeunZhXQ5dhv0VQ5c');
         utl_http.set_header(r => req, name => 'changeset-id', value => vChangeSetID);
         utl_http.set_header(r => req, name => 'Content-Type', value => 'application/xml');--'text/plain');
+        utl_http.set_header(r => req, name => 'x-dl-meta-title', value => 'publish');
+        utl_http.set_header(r => req, name => 'x-dl-meta-id', value => 'NACRM.'||Y.OCPGUID||'.'||Y.OCPGUID);
+        utl_http.set_header(r => req, name => 'x-dl-meta-action', value => 'add');
+        utl_http.set_header(r => req, name => 'x-dl-meta-contenttype', value => 'application/x-account-team+xml;version=1');
+        utl_http.set_header(r => req, name => 'x-dl-meta-contenttypesrc', value => 'cid:NACRM.'||Y.OCPGUID||'.'||Y.OCPGUID||'@master.lexisnexis.com');
+     --   utl_http.set_header(r => req, name => 'x-dl-meta-updated', TO_CHAR(SYSDATE,'YYYY-MM-DD')||'T'||TO_CHAR(SYSDATE,'HH24:MI:SS'));
+        
         utl_http.set_header(req, 'Content-Length', content_length);
         utl_http.write_text(req, content);
         res := utl_http.get_response(req);
@@ -128,15 +137,37 @@ FOR X in C1 LOOP
    
   END LOOP;   
 
+-- Create atom feed (JSON)  
+      OPEN l_cursor FOR
+        SELECT  
+          'GCRM LSP Publish' AS "title"
+          , 1 AS "subtitle"
+          ,'urn:uuid:'||LOWER(regexp_replace(rawtohex(sys_guid()),   '([A-F0-9]{8})([A-F0-9]{4})([A-F0-9]{4})([A-F0-9]{4})([A-F0-9]{12})',   '\1-\2-\3-\4-\5')) as "id"
+          , TO_CHAR(SYSDATE,'YYYY-MM-DD')||'T'||TO_CHAR(SYSDATE,'HH24:MI:SS') AS "updated"
+          , 'incremental' as "lnpub:publishType"    
+         FROM DUAL;
+    
+       APEX_JSON.initialize_clob_output;
+       APEX_JSON.open_object;
+       APEX_JSON.write('changeset-metadata', l_cursor);
+       APEX_JSON.close_object;
+       DBMS_OUTPUT.put_line(APEX_JSON.get_clob_output);
+       APEX_JSON.free_output;  
+       
+       content_length := length(APEX_JSON.get_clob_output);
 -- Close ChangeSet
        v_chgSetURL := NULL;
     --Create ChangeSet ID
         v_chgSetURL := v_chgSetBaseURL||'/'||vChangeSetID;
         dbms_output.put_line (' URL :' || v_chgSetURL);
+        
+      --  utl_http.set_header(req, 'Content-Length', content_length);
         utl_http.set_response_error_check(enable => false);
         utl_http.set_detailed_excp_support(enable => true);
-        req := utl_http.begin_request(v_chgSetURL, 'POST');   
-        utl_http.set_header(r => req, name => 'x-api-key', value => v_apikey);
+        req := utl_http.begin_request(v_chgSetURL, 'POST');
+        utl_http.set_header(r => req, name => 'Content-Type', value => 'application/json');--'text/plain');
+        utl_http.set_header(r => req, name => 'x-api-key', value => v_apikey);        
+      --  utl_http.write_text(req, APEX_JSON.get_clob_output);
         res := utl_http.get_response(req);
         utl_http.read_text(res, respond);
         utl_http.end_response(res);
