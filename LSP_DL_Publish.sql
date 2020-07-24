@@ -185,7 +185,10 @@ FOR X in C1 LOOP
        -- vChangeSetID := APEX_JSON.get_varchar2(p_path => 'changeset."changeset-id"');
         DBMS_OUTPUT.put_line('ChangeSet   : ' || APEX_JSON.get_varchar2(p_path => 'changeset."changeset-state"')); 
 
- 
+        UPDATE LN_DATALAKE_REFERENCE SET  EPOCH_NUM = EPOCH_NUM + 1
+        WHERE  DL_PROCESS_NAME = 'LSP_PUBLISH';
+        
+        COMMIT;
 
 
 DBMS_OUTPUT.PUT_LINE ('Number :'|| to_char(i));
