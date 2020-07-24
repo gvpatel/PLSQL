@@ -2,17 +2,15 @@ CREATE OR REPLACE PROCEDURE SP_LSP_DATALAKE_PUBLISH
 AS
 
     req              utl_http.req;
-    res              utl_http.resp;
-    --'http://datalake.content.aws.lexis.com/objects/v1/testobject1?collection-id=ProductMasterTestCollection'
-    base_url         VARCHAR2(400); -- := 'http://datalake-staging-proxy.lexis.com/objects/v1/';
-    end_url          VARCHAR2(400); -- := '?collection-id=ProductMasterTestCollection';
-    v_chgSetBaseURL  VARCHAR2(800); -- := 'http://datalake-staging-proxy.lexis.com/objects/v1/changeset';
+    res              utl_http.resp;   
+    base_url         VARCHAR2(400); 
+    end_url          VARCHAR2(400); 
+    v_chgSetBaseURL  VARCHAR2(800); 
     v_chgSetURL      VARCHAR2(800);
     vChangeSetID     VARCHAR2(500);
     url              VARCHAR2(800); 
-   -- v_collection     VARCHAR2(100) := 'ProductMasterTestCollection';
-   v_collection     VARCHAR2(100);-- := 'GCRMLSPPUBLISH';
-    v_apikey         VARCHAR2(100); -- := '9Ps9jBw2dj87epSD1FH9X1GHtJfQXLTh9vcVWRa0';
+    v_collection     VARCHAR2(100);
+    v_apikey         VARCHAR2(100); 
     name             VARCHAR2(4000);
     buffer           VARCHAR2(4000);
     content          CLOB;
@@ -112,8 +110,7 @@ FOR X in C1 LOOP
         -- content := 'Welcome';
         content := Y.v_xml.getStringVal();
         
-     --   url  := 'http://datalake-staging-proxy.lexis.com/objects/v1/'||Y.OCPGUID||'?collection-id=ProductMasterTestCollection';
-     
+       
         url := base_url||Y.OCPGUID||'?collection-id='||v_collection;
    
         content_length := length(y.v_xml.getStringVal());
@@ -166,7 +163,7 @@ FOR X in C1 LOOP
        content_length := length(APEX_JSON.get_clob_output);
 -- Close ChangeSet
        v_chgSetURL := NULL;
-    --Create ChangeSet ID
+--Create ChangeSet ID
         v_chgSetURL := base_url||'changeset/'||vChangeSetID;
         dbms_output.put_line (' URL :' || v_chgSetURL);
         
