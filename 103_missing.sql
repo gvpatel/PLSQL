@@ -9,7 +9,7 @@ SELECT c.name, c.integration_id , a.row_id, a.agree_num, a.stat_cd as GCRM_STATU
                         OR  a.stat_cd = 'Inactive' )  THEN
      'EXPIRED'
      ELSE 'ACTIVE' 
-   END  AS REAL_STATUS,
+    END  AS REAL_STATUS,
    X_MONTLY_NET_PRICE,
  
  (  SELECT case when count(*) > 0 then 'Y' ELSE 'N' END from siebel.s_doc_agree p, siebel.s_asset q
